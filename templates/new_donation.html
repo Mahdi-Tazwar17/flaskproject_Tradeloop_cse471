@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Donation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .donation-container {
+            display: flex;
+            height: 80vh;
+            margin-top: 20px;
+        }
+        .sidebar {
+            width: 250px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .card {
+            border-radius: 8px;
+        }
+        .card-header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .status-badge {
+            font-size: 1rem;
+        }
+        .btn-action {
+            margin-right: 10px;
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .form-label {
+            font-weight: bold;
+        }
+        .form-text {
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/home">
+                <img src="{{ url_for('static', filename='logo.png') }}" height="40" alt="Logo">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user_dashboard">Dashboard</a>
+                    </li>
+                </ul>
+                <div class="nav-buttons ms-auto">
+                    <a href="/donations" class="btn btn-outline-light position-relative me-2 active">
+                        <i class="nav-icon">🎁</i> Donations
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                            <i class="nav-icon">👤</i> {{ session.user_name }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/user_dashboard">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="/profile/{{ session.user_id }}">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+        <h1 class="mb-4">Donate an Item</h1>
+
+        <div class="donation-container">
+            <!-- Sidebar with Donation List -->
+            <div class="sidebar">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a href="/donations" class="nav-link">
+                            <i class="nav-icon">🎁</i> Donations
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/donations/new" class="nav-link">
+                            <i class="nav-icon">➕</i> Donate an Item
+                        </a>
+                    </li>
+                    <!-- Add more links here as needed -->
+                </ul>
+            </div>
+
+            <!-- Donation Form -->
+            <div class="main-content">
+                <div class="mb-4">
+                    <a href="/donations/new" class="btn btn-success">
+                        <i class="nav-icon">➕</i> Donate an Item
+                    </a>
+                </div>
+
+                <!-- Flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-body">
+                                <form method="POST" action="/donations/new" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label class="form-label">Donate to</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="recipient_type" id="recipient_type_user" value="user" checked>
+                                            <label class="form-check-label" for="recipient_type_user">
+                                                Specific User
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="recipient_type" id="recipient_type_admin" value="admin">
+                                            <label class="form-check-label" for="recipient_type_admin">
+                                                Admin/Organization
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3" id="recipient_select_container">
+                                        <label for="recipient_id" class="form-label">Select Recipient</label>
+                                        <select class="form-select" id="recipient_id" name="recipient_id">
+                                            <option value="">Select a recipient</option>
+                                            {% for user in users %}
+                                                <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="item_name" class="form-label">Item Name</label>
+                                        <input type="text" class="form-control" id="item_name" name="item_name" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Description</label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="condition" class="form-label">Condition</label>
+                                        <select class="form-select" id="condition" name="condition" required>
+                                            <option value="">Select condition</option>
+                                            <option value="New">New</option>
+                                            <option value="Like New">Like New</option>
+                                            <option value="Good">Good</option>
+                                            <option value="Fair">Fair</option>
+                                            <option value="Poor">Poor</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="item_image" class="form-label">Item Image</label>
+                                        <input type="file" class="form-control" id="item_image" name="item_image" accept="image/*">
+                                        <div class="form-text">Upload an image of the item you're donating (optional)</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div id="image_preview" class="mt-2" style="display: none;">
+                                            <p>Image Preview:</p>
+                                            <img id="preview_img" src="#" alt="Preview" style="max-width: 100%; max-height: 300px;">
+                                        </div>
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="nav-icon">🎁</i> Donate Item
+                                        </button>
+                                        <a href="/donations" class="btn btn-outline-secondary">Cancel</a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Toggle recipient selection based on donation type
+        document.querySelectorAll('input[name="recipient_type"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const recipientContainer = document.getElementById('recipient_select_container');
+                if (this.value === 'user') {
+                    recipientContainer.style.display = 'block';
+                    document.getElementById('recipient_id').setAttribute('required', '');
+                } else {
+                    recipientContainer.style.display = 'none';
+                    document.getElementById('recipient_id').removeAttribute('required');
+                }
+            });
+        });
+
+        // Image preview functionality
+        document.getElementById('item_image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                const preview = document.getElementById('preview_img');
+                const previewContainer = document.getElementById('image_preview');
+
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+</html>

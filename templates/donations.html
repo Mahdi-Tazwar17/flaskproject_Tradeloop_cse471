@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Donations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .donation-container {
+            display: flex;
+            height: 80vh;
+            margin-top: 20px;
+        }
+        .sidebar {
+            width: 250px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .card {
+            border-radius: 8px;
+        }
+        .card-header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .donation-image {
+            max-height: 300px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .status-badge {
+            font-size: 1rem;
+        }
+        .btn-action {
+            margin-right: 10px;
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/home">
+                <img src="{{ url_for('static', filename='logo.png') }}" height="40" alt="Logo">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user_dashboard">Dashboard</a>
+                    </li>
+                </ul>
+                <div class="nav-buttons ms-auto">
+                    <a href="/donations" class="btn btn-outline-light position-relative me-2 active">
+                        <i class="nav-icon">🎁</i> Donations
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                            <i class="nav-icon">👤</i> {{ session.user_name }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/user_dashboard">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="/profile/{{ session.user_id }}">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+        <h1 class="mb-4">Donations</h1>
+
+        <div class="donation-container">
+            <!-- Sidebar with Donation List -->
+            <div class="sidebar">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a href="/donations" class="nav-link">
+                            <i class="nav-icon">🎁</i> Donations
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/donations/new" class="nav-link">
+                            <i class="nav-icon">➕</i> Donate an Item
+                        </a>
+                    </li>
+                    <!-- Add more links here as needed -->
+                </ul>
+            </div>
+
+            <!-- Donation List Display -->
+            <div class="main-content">
+                <div class="mb-4">
+                    <a href="/donations/new" class="btn btn-success">
+                        <i class="nav-icon">➕</i> Donate an Item
+                    </a>
+                </div>
+
+                <!-- Flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="row">
+                    <!-- Donations Received -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Donations Received</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if donations_received %}
+                                    <div class="list-group">
+                                        {% for donation in donations_received %}
+                                            <a href="/donations/{{ donation.id }}" class="list-group-item list-group-item-action">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h5 class="mb-1">{{ donation.item_name }}</h5>
+                                                    <small>
+                                                        {% if donation.status == 'pending' %}
+                                                            <span class="badge bg-warning">Pending</span>
+                                                        {% elif donation.status == 'accepted' %}
+                                                            <span class="badge bg-success">Accepted</span>
+                                                        {% elif donation.status == 'declined' %}
+                                                            <span class="badge bg-danger">Declined</span>
+                                                        {% elif donation.status == 'completed' %}
+                                                            <span class="badge bg-info">Completed</span>
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    {% if donation.image_filename %}
+                                                        <img src="{{ url_for('static', filename='uploads/' + donation.image_filename) }}" 
+                                                             alt="{{ donation.item_name }}" 
+                                                             class="me-2 rounded" 
+                                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                    <div>
+                                                        <p class="mb-1">From: {{ donation.donor.first_name }} {{ donation.donor.last_name }}</p>
+                                                        <small>{{ donation.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">You haven't received any donations yet.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Donations Made -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Donations Made</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if donations_made %}
+                                    <div class="list-group">
+                                        {% for donation in donations_made %}
+                                            <a href="/donations/{{ donation.id }}" class="list-group-item list-group-item-action">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h5 class="mb-1">{{ donation.item_name }}</h5>
+                                                    <small>
+                                                        {% if donation.status == 'pending' %}
+                                                            <span class="badge bg-warning">Pending</span>
+                                                        {% elif donation.status == 'accepted' %}
+                                                            <span class="badge bg-success">Accepted</span>
+                                                        {% elif donation.status == 'declined' %}
+                                                            <span class="badge bg-danger">Declined</span>
+                                                        {% elif donation.status == 'completed' %}
+                                                            <span class="badge bg-info">Completed</span>
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    {% if donation.image_filename %}
+                                                        <img src="{{ url_for('static', filename='uploads/' + donation.image_filename) }}" 
+                                                             alt="{{ donation.item_name }}" 
+                                                             class="me-2 rounded" 
+                                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                    <div>
+                                                        {% if donation.is_admin_donation %}
+                                                            <p class="mb-1">To: Admin/Organization</p>
+                                                        {% else %}
+                                                            <p class="mb-1">To: {{ donation.recipient.first_name }} {{ donation.recipient.last_name }}</p>
+                                                        {% endif %}
+                                                        <small>{{ donation.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">You haven't made any donations yet.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Donations (Only visible to admins) -->
+                    {% if is_admin %}
+                    <div class="col-12 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">Admin Donations</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if admin_donations %}
+                                    <div class="list-group">
+                                        {% for donation in admin_donations %}
+                                            <a href="/donations/{{ donation.id }}" class="list-group-item list-group-item-action">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h5 class="mb-1">{{ donation.item_name }}</h5>
+                                                    <small>
+                                                        {% if donation.status == 'pending' %}
+                                                            <span class="badge bg-warning">Pending</span>
+                                                        {% elif donation.status == 'accepted' %}
+                                                            <span class="badge bg-success">Accepted</span>
+                                                        {% elif donation.status == 'declined' %}
+                                                            <span class="badge bg-danger">Declined</span>
+                                                        {% elif donation.status == 'completed' %}
+                                                            <span class="badge bg-info">Completed</span>
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    {% if donation.image_filename %}
+                                                        <img src="{{ url_for('static', filename='uploads/' + donation.image_filename) }}" 
+                                                             alt="{{ donation.item_name }}" 
+                                                             class="me-2 rounded" 
+                                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                    <div>
+                                                        <p class="mb-1">From: {{ donation.donor.first_name }} {{ donation.donor.last_name }}</p>
+                                                        <small>{{ donation.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">No admin donations available.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
